@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#15803d">
+  <title>DompetKu — Atur Uang & Wishlist</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --green: #15803d;
+      --green-dark: #166534;
+      --green-light: #dcfce7;
+      --ink: #17231b;
+      --muted: #647067;
+      --line: #e6ebe7;
+      --surface: #fff;
+      --background: #f3f7f3;
+      --red: #dc2626;
+      --orange: #f59e0b;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px 16px 48px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at top left, #e1f4e4 0, transparent 38%),
+        var(--background);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { max-width: 760px; margin: 0 auto; }
+
+    header { margin: 6px 0 20px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -.5px; }
+    header p { margin: 6px 0 0; color: var(--muted); }
+
+    .card {
+      margin-top: 16px;
+      padding: 20px;
+      border: 1px solid rgba(230, 235, 231, .9);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(20, 50, 30, .055);
+    }
+
+    .date-badge, .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 11px;
+      border-radius: 999px;
+      color: var(--green-dark);
+      background: var(--green-light);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .balance-label { margin-top: 18px; color: var(--muted); }
+    .balance { margin: 2px 0 18px; font-size: clamp(32px, 8vw, 42px); font-weight: 800; letter-spacing: -1.5px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat {
+      min-width: 0;
+      padding: 13px 10px;
+      border-radius: 14px;
+      background: #f6f8f6;
+    }
+    .stat span { display: block; color: var(--muted); font-size: 12px; }
+    .stat b { display: block; margin-top: 7px; font-size: clamp(13px, 3.5vw, 17px); overflow-wrap: anywhere; }
+
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    h3 { margin: 0 0 14px; font-size: 17px; }
+    .ideal { margin-top: 20px; }
+    .ideal-title { font-weight: 750; }
+    .ideal-row, .transaction, .wish-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .ideal-row { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .hint { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+    .progress {
+      height: 11px;
+      margin-top: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #edf0ed;
+    }
+    .progress > div { height: 100%; border-radius: inherit; transition: width .25s ease; }
+
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; }
+    .tab {
+      padding: 11px 8px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      color: var(--ink);
+      background: #e8f3e9;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .tab.active { color: #fff; background: var(--green); }
+
+    label { display: block; margin-top: 12px; font-size: 13px; font-weight: 650; }
+    input, select {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 6px;
+      padding: 11px 12px;
+      border: 1px solid #dce3dd;
+      border-radius: 11px;
+      outline: none;
+      color: var(--ink);
+      background: #fff;
+    }
+    input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px #16a34a20; }
+
+    .btn {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 12px;
+      padding: 11px 14px;
+      border: 0;
+      border-radius: 11px;
+      color: #fff;
+      background: var(--green);
+      font-weight: 750;
+    }
+    .btn:hover { background: var(--green-dark); }
+    .btn.dark { background: #202820; }
+    .btn.light { color: var(--ink); border: 1px solid var(--line); background: #fff; }
+    .btn.small { width: auto; min-height: 38px; margin-top: 0; padding: 8px 11px; font-size: 12px; }
+    .btn.danger { color: var(--red); border: 1px solid #fecaca; background: #fff; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+    .receipt-preview {
+      display: none;
+      width: 100%;
+      max-height: 280px;
+      margin-top: 12px;
+      border-radius: 12px;
+      object-fit: contain;
+      background: #f6f8f6;
+    }
+
+    .wish {
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fffdf6;
+    }
+    .wish-title { overflow-wrap: anywhere; }
+    .wish-photo {
+      display: block;
+      width: 100%;
+      max-height: 240px;
+      margin-top: 10px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+    .wish-meta { margin-top: 7px; color: var(--muted); font-size: 12px; }
+    .wish-meta a { color: var(--green-dark); }
+    .wish-amounts { display: flex; justify-content: space-between; gap: 8px; margin-top: 11px; font-size: 13px; }
+    .wish-status { margin-top: 8px; font-size: 13px; }
+    .wish-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .wish-actions .btn { flex: 1; }
+
+    .transaction { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .transaction:last-child { border-bottom: 0; }
+    .transaction-name { overflow-wrap: anywhere; font-weight: 700; }
+    .transaction small { display: block; margin-top: 4px; color: var(--muted); }
+    .transaction-right { flex-shrink: 0; text-align: right; }
+    .amount-in { color: var(--green-dark); }
+    .amount-out { color: var(--red); }
+    .delete-link {
+      margin-top: 5px;
+      padding: 0;
+      border: 0;
+      color: var(--red);
+      background: transparent;
+      font-size: 12px;
+    }
+    .empty { color: var(--muted); font-size: 14px; }
+
+    @media (max-width: 560px) {
+      body { padding: 18px 12px 36px; }
+      .card { padding: 16px; border-radius: 17px; }
+      .tabs { grid-template-columns: repeat(2, 1fr); }
+      .stats { gap: 7px; }
+      .stat { padding: 11px 8px; }
+      .wish-amounts { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>💰 DompetKu</h1>
+      <p>Atur uang, catat pengeluaran, dan capai wishlist kamu.</p>
+    </header>
+
+    <section class="card" aria-label="Ringkasan keuangan">
+      <span class="date-badge" id="tanggalHari"></span>
+      <div class="balance-label">Saldo saat ini</div>
+      <div class="balance" id="saldo">Rp 0</div>
+
+      <div class="stats">
+        <div class="stat"><span>🟢 Pemasukan</span><b id="totalMasuk">Rp 0</b></div>
+        <div class="stat"><span>🔴 Pengeluaran</span><b id="totalKeluar">Rp 0</b></div>
+        <div class="stat"><span>🎯 Tabungan wishlist</span><b id="totalWish">Rp 0</b></div>
+      </div>
+
+      <div class="ideal">
+        <div class="ideal-title">🎯 Panduan anggaran 50/30/20</div>
+        <div id="idealBox"></div>
+        <div class="progress"><div id="barNabung" style="width:0;background:var(--green)"></div></div>
+        <p class="hint" id="barText"></p>
+      </div>
+    </section>
+
+    <nav class="tabs" aria-label="Menu transaksi">
+      <button class="tab active" type="button" data-mode="masuk">＋ Pemasukan</button>
+      <button class="tab" type="button" data-mode="keluar">－ Pengeluaran</button>
+      <button class="tab" type="button" data-mode="struk">🧾 Foto struk</button>
+      <button class="tab" type="button" data-mode="wishlist">🎁 Wishlist</button>
+    </nav>
+
+    <section class="card">
+      <div id="transactionForm">
+        <h2 id="formTitle">Tambah pemasukan</h2>
+
+        <label for="nama">Nama transaksi</label>
+        <input id="nama" maxlength="80" placeholder="Contoh: Uang jajan atau gaji">
+
+        <label for="nominal">Nominal (Rp)</label>
+        <input id="nominal" type="number" min="1" step="1" inputmode="numeric" placeholder="Contoh: 50000">
+
+        <label for="kategori">Kategori</label>
+        <select id="kategori">
+          <option value="Kebutuhan">Kebutuhan (50%)</option>
+          <option value="Keinginan">Keinginan / jajan (30%)</option>
+          <option value="Tabungan">Tabungan (20%)</option>
+        </select>
+
+        <div id="strukArea" hidden>
+          <label for="fotoStruk">Pilih foto struk</label>
+          <input id="fotoStruk" type="file" accept="image/*" capture="environment">
+          <img id="preview" class="receipt-preview" alt="Pratinjau foto struk">
+          <p class="hint" id="statusOCR">Pilih foto struk, lalu coba baca nominalnya otomatis.</p>
+          <button class="btn light" type="button" id="bacaStruk">🔍 Baca struk otomatis</button>
+        </div>
+
+        <button class="btn" type="button" id="simpanTransaksi">Simpan transaksi</button>
+      </div>
+
+      <div id="wishlistForm" hidden>
+        <h2>Buat target wishlist</h2>
+        <label for="wishNama">Nama wishlist</label>
+        <input id="wishNama" maxlength="80" placeholder="Contoh: Sepatu, HP, atau skincare">
+
+        <label for="wishTarget">Target harga (Rp)</label>
+        <input id="wishTarget" type="number" min="1" step="1" inputmode="numeric" placeholder="Contoh: 300000">
+
+        <label for="wishFoto">Foto (opsional)</label>
+        <input id="wishFoto" type="file" accept="image/*">
+
+        <label for="wishLink">Link toko (opsional)</label>
+        <input id="wishLink" type="url" placeholder="https://...">
+
+        <button class="btn" type="button" id="tambahWishlist">＋ Tambah wishlist</button>
+        <p class="hint">Setiap menabung ke wishlist, jumlahnya juga dicatat sebagai pengeluaran agar saldo tetap akurat.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>🎁 Wishlist & target tabungan</h2>
+      <div id="listWish"></div>
+    </section>
+
+    <section class="card">
+      <h2>Riwayat transaksi</h2>
+      <div id="listTransaksi"></div>
+      <button class="btn dark" type="button" id="hapusSemua">Hapus semua data</button>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script>
+    "use strict";
+
+    const STORAGE_DATA = "dompetku";
+    const STORAGE_WISH = "dompetku_wish";
+
+    function loadArray(key) {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(value) ? value : [];
+      } catch {
+        return [];
+      }
+    }
+
+    let data = loadArray(STORAGE_DATA);
+    let wishlist = loadArray(STORAGE_WISH);
+    let mode = "masuk";
+    let receiptObjectUrl = "";
+
+    const byId = id => document.getElementById(id);
+    const rupiah = value => "Rp " + (Number(value) || 0).toLocaleString("id-ID");
+    const today = () => new Date().toLocaleDateString("id-ID");
+
+    function escapeHTML(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+
+    function safeLink(value) {
+      try {
+        const url = new URL(value);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+      } catch {
+        return "";
+      }
+    }
+
+    function persist() {
+      localStorage.setItem(STORAGE_DATA, JSON.stringify(data));
+      localStorage.setItem(STORAGE_WISH, JSON.stringify(wishlist));
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      document.querySelectorAll(".tab").forEach(button => {
+        button.classList.toggle("active", button.dataset.mode === mode);
+      });
+
+      const isWishlist = mode === "wishlist";
+      byId("transactionForm").hidden = isWishlist;
+      byId("wishlistForm").hidden = !isWishlist;
+      byId("strukArea").hidden = mode !== "struk";
+
+      const titles = {
+        masuk: "Tambah pemasukan",
+        keluar: "Tambah pengeluaran",
+        struk: "Tambah pengeluaran dari struk"
+      };
+      byId("formTitle").textContent = titles[mode] || titles.masuk;
+    }
+
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => setMode(button.dataset.mode));
+    });
+
+    byId("tanggalHari").textContent = new Date().toLocaleDateString("id-ID", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric"
+    });
+
+    byId("fotoStruk").addEventListener("change", event => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (receiptObjectUrl) URL.revokeObjectURL(receiptObjectUrl);
+      receiptObjectUrl = URL.createObjectURL(file);
+
+      const preview = byId("preview");
+      preview.src = receiptObjectUrl;
+      preview.style.display = "block";
+      byId("nama").value = "Belanja dari struk";
+      byId("statusOCR").textContent = "Foto siap dibaca. Periksa kembali nominal hasil OCR sebelum menyimpan.";
+    });
+
+    byId("bacaStruk").addEventListener("click", async () => {
+      if (!receiptObjectUrl) {
+        alert("Pilih foto struk terlebih dahulu.");
+        return;
+      }
+      if (!window.Tesseract) {
+        byId("statusOCR").textContent = "Fitur OCR tidak tersedia. Isi nominal secara manual.";
+        return;
+      }
+
+      byId("bacaStruk").disabled = true;
+      byId("statusOCR").textContent = "⏳ Sedang membaca struk...";
+      try {
+        const result = await Tesseract.recognize(receiptObjectUrl, "eng");
+        const numbers = (result.data.text.match(/[\\d.,]+/g) || [])
+          .map(item => Number.parseInt(item.replace(/[.,]/g, ""), 10))
+          .filter(number => Number.isFinite(number) && number > 1000 && number < 100000000);
+
+        if (numbers.length) {
+          const total = Math.max(...numbers);
+          byId("nominal").value = total;
+          byId("statusOCR").textContent =
+            "✅ Perkiraan total: " + rupiah(total) + ". Periksa dan edit jika hasilnya belum tepat.";
+        } else {
+          byId("statusOCR").textContent = "Nominal belum ditemukan. Silakan isi secara manual.";
+        }
+      } catch {
+        byId("statusOCR").textContent = "Gagal membaca foto. Silakan isi nominal secara manual.";
+      } finally {
+        byId("bacaStruk").disabled = false;
+      }
+    });
+
+    byId("simpanTransaksi").addEventListener("click", () => {
+      const nominal = Number(byId("nominal").value);
+      if (!Number.isSafeInteger(nominal) || nominal <= 0) {
+        alert("Masukkan nominal lebih dari Rp 0.");
+        byId("nominal").focus();
+        return;
+      }
+
+      data.unshift({
+        nama: byId("nama").value.trim() || "Tanpa nama",
+        nominal,
+        kategori: byId("kategori").value,
+        tipe: mode === "masuk" ? "masuk" : "keluar",
+        tanggal: today()
+      });
+
+      persist();
+      byId("nama").value = "";
+      byId("nominal").value = "";
+      render();
+    });
+
+    byId("tambahWishlist").addEventListener("click", () => {
+      const nama = byId("wishNama").value.trim();
+      const target = Number(byId("wishTarget").value);
+      const file = byId("wishFoto").files && byId("wishFoto").files[0];
+
+      if (!nama || !Number.isSafeInteger(target) || target <= 0) {
+        alert("Isi nama wishlist dan target harga yang valid.");
+        return;
+      }
+
+      const linkInput = byId("wishLink").value.trim();
+      const link = linkInput ? safeLink(linkInput) : "";
+      if (linkInput && !link) {
+        alert("Link toko harus menggunakan alamat http:// atau https:// yang valid.");
+        return;
+      }
+
+      const addWish = foto => {
+        wishlist.unshift({ nama, target, terkumpul: 0, link, foto, tanggal: today() });
+        persist();
+        byId("wishNama").value = "";
+        byId("wishTarget").value = "";
+        byId("wishFoto").value = "";
+        byId("wishLink").value = "";
+        render();
+      };
+
+      if (!file) {
+        addWish("");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = event => addWish(String(event.target.result || ""));
+      reader.onerror = () => alert("Foto tidak dapat dibaca. Silakan coba lagi.");
+      reader.readAsDataURL(file);
+    });
+
+    function addSavings(index, amount) {
+      const wish = wishlist[index];
+      if (!wish) return;
+
+      let value = amount;
+      if (value == null) {
+        const answer = prompt('Mau menabung berapa untuk "' + wish.nama + '"?');
+        if (answer === null) return;
+        value = Number(answer.replace(/[^\d]/g, ""));
+      }
+
+      if (!Number.isSafeInteger(value) || value <= 0) {
+        alert("Masukkan nominal tabungan lebih dari Rp 0.");
+        return;
+      }
+
+      wish.terkumpul = (Number(wish.terkumpul) || 0) + value;
+      data.unshift({
+        nama: "Nabung: " + wish.nama,
+        nominal: value,
+        kategori: "Tabungan",
+        tipe: "keluar",
+        tanggal: today()
+      });
+
+      persist();
+      render();
+      if (wish.terkumpul >= wish.target) {
+        alert('🎉 Yeay! Target "' + wish.nama + '" sudah tercapai!');
+      }
+    }
+
+    function removeWish(index) {
+      if (!confirm("Hapus wishlist ini? Riwayat transaksi tabungan tidak ikut dihapus.")) return;
+      wishlist.splice(index, 1);
+      persist();
+      render();
+    }
+
+    function removeTransaction(index) {
+      data.splice(index, 1);
+      persist();
+      render();
+    }
+
+    byId("hapusSemua").addEventListener("click", () => {
+      if (!confirm("Yakin ingin menghapus semua transaksi dan wishlist? Tindakan ini tidak bisa dibatalkan.")) return;
+      data = [];
+      wishlist = [];
+      localStorage.removeItem(STORAGE_DATA);
+      localStorage.removeItem(STORAGE_WISH);
+      render();
+    });
+
+    function render() {
+      const masuk = data
+        .filter(item => item.tipe === "masuk")
+        .reduce((sum, item) => sum + (Number(item.nominal) || 0), 0);
+      const keluar = data
+        .filter(item => item.tipe === "keluar")
+        .reduce((sum, item) => sum + (Number(item.nominal) || 0), 0);
+      const saldo = masuk - keluar;
+      const totalWish = wishlist.reduce((sum, item) => sum + (Number(item.terkumpul) || 0), 0);
+
+      byId("saldo").textContent = rupiah(saldo);
+      byId("totalMasuk").textContent = rupiah(masuk);
+      byId("totalKeluar").textContent = rupiah(keluar);
+      byId("totalWish").textContent = rupiah(totalWish);
+
+      const idealKebutuhan = masuk * 0.5;
+      const idealKeinginan = masuk * 0.3;
+      const idealTabungan = masuk * 0.2;
+      const persenNabung = masuk > 0 ? Math.round((totalWish / masuk) * 100) : 0;
+
+      byId("idealBox").innerHTML = `
+        <div class="ideal-row"><span>🍚 Kebutuhan (50%)</span><b>${rupiah(idealKebutuhan)}</b></div>
+        <div class="ideal-row"><span>🍟 Keinginan (30%)</span><b>${rupiah(idealKeinginan)}</b></div>
+        <div class="ideal-row"><span>💰 Tabungan (20%)</span><b style="color:var(--green)">${rupiah(idealTabungan)}</b></div>
+        <p class="hint">Panduan pembagian dari total pemasukan ${rupiah(masuk)}.</p>`;
+
+      byId("barNabung").style.width = Math.min(100, Math.max(0, persenNabung)) + "%";
+      byId("barText").textContent =
+        `Tabungan wishlist sekitar ${persenNabung}% dari pemasukan. Target panduan: 20%.`;
+
+      const wishContainer = byId("listWish");
+      if (!wishlist.length) {
+        wishContainer.innerHTML = '<p class="empty">Belum ada wishlist. Yuk buat target pertamamu!</p>';
+      } else {
+        wishContainer.innerHTML = wishlist.map((wish, index) => {
+          const target = Number(wish.target) || 0;
+          const terkumpul = Number(wish.terkumpul) || 0;
+          const persen = target > 0 ? Math.min(100, Math.round(terkumpul / target * 100)) : 0;
+          const sisa = Math.max(0, target - terkumpul);
+          const tercapai = target > 0 && terkumpul >= target;
+          const link = safeLink(wish.link || "");
+          const foto = typeof wish.foto === "string" && wish.foto.startsWith("data:image/") ? wish.foto : "";
+
+          return `
+            <article class="wish">
+              <div class="wish-top">
+                <b class="wish-title">🎁 ${escapeHTML(wish.nama || "Wishlist")}</b>
+                <button class="delete-link" type="button" data-action="delete-wish" data-index="${index}">Hapus</button>
+              </div>
+              ${foto ? `<img class="wish-photo" src="${foto}" alt="Foto ${escapeHTML(wish.nama)}">` : ""}
+              <div class="wish-meta">
+                ${escapeHTML(wish.tanggal || "")}
+                ${link ? ` · <a href="${escapeHTML(link)}" target="_blank" rel="noopener noreferrer">Lihat di toko</a>` : ""}
+              </div>
+              <div class="wish-amounts">
+                <span>Terkumpul: <b>${rupiah(terkumpul)}</b></span>
+                <span>Target: <b>${rupiah(target)}</b></span>
+              </div>
+              <div class="progress"><div style="width:${persen}%;background:${tercapai ? "var(--green)" : "var(--orange)"}"></div></div>
+              <div class="wish-status">
+                ${tercapai
+                  ? "🎉 <b>Target tercapai! Selamat!</b>"
+                  : `Kurang <b>${rupiah(sisa)}</b> lagi · ${persen}% · Saran per minggu: <b>${rupiah(Math.ceil(sisa / 4))}</b>`}
+              </div>
+              ${!tercapai ? `
+                <div class="wish-actions">
+                  <button class="btn small" type="button" data-action="save-custom" data-index="${index}">＋ Nabung ke sini</button>
+                  <button class="btn small light" type="button" data-action="save-20" data-index="${index}">Nabung 20% (${rupiah(Math.round(masuk * 0.2))})</button>
+                </div>` : ""}
+            </article>`;
+        }).join("");
+      }
+
+      const transactions = byId("listTransaksi");
+      if (!data.length) {
+        transactions.innerHTML = '<p class="empty">Belum ada transaksi.</p>';
+      } else {
+        transactions.innerHTML = data.map((item, index) => {
+          const isIncome = item.tipe === "masuk";
+          return `
+            <div class="transaction">
+              <div>
+                <div class="transaction-name">${isIncome ? "🟢" : "🔴"} ${escapeHTML(item.nama || "Tanpa nama")}</div>
+                <small>${escapeHTML(item.tanggal || "")} · ${escapeHTML(item.kategori || "")}</small>
+              </div>
+              <div class="transaction-right">
+                <b class="${isIncome ? "amount-in" : "amount-out"}">${isIncome ? "+" : "−"} ${rupiah(item.nominal)}</b><br>
+                <button class="delete-link" type="button" data-action="delete-transaction" data-index="${index}">Hapus</button>
+              </div>
+            </div>`;
+        }).join("");
+      }
+    }
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+      const index = Number(button.dataset.index);
+
+      if (button.dataset.action === "delete-wish") removeWish(index);
+      if (button.dataset.action === "delete-transaction") removeTransaction(index);
+      if (button.dataset.action === "save-custom") addSavings(index);
+      if (button.dataset.action === "save-20") {
+        const amount = Math.round(
+          data.filter(item => item.tipe === "masuk")
+            .reduce((sum, item) => sum + (Number(item.nominal) || 0), 0) * 0.2
+        );
+        if (amount <= 0) {
+          alert("Tambahkan pemasukan terlebih dahulu untuk menghitung 20% tabungan.");
+          return;
+        }
+        addSavings(index, amount);
+      }
+    });
